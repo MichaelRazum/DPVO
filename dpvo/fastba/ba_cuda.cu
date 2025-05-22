@@ -441,9 +441,14 @@ std::vector<torch::Tensor> cuda_ba(
     torch::Tensor jj,
     torch::Tensor kk,
     const int PPF,
-    const int t0, const int t1, const int iterations, bool eff_impl)
+    const int t0, const int t1, 
+    const int iterations, 
+    bool eff_impl,
+    const float alpha1,
+    const float alpha2,
+    const bool  c_depth_reg,
+    torch::Tensor depth_prior)
 {
-
   auto ktuple = torch::_unique(kk, true, true);
   torch::Tensor kx = std::get<0>(ktuple);
   torch::Tensor ku = std::get<1>(ktuple);
@@ -515,8 +520,25 @@ std::vector<torch::Tensor> cuda_ba(
     // std::cout << "Total residuals: " << r_total.item<double>() << std::endl;
     v = v.view({6*N, 1});
     u = u.view({1*M, 1});
-
-    torch::Tensor Q = 1.0 / (C + lmbda).view({1, M});
+    if (alpha1 > 0.0f && depth_prior.numel() == M) {
+      const int pc = P / 2;
+      depth_prior = depth_prior.view({M}).to(mdtype);
+      torch::Tensor invDepth_est = patches.index({kx, 2, pc, pc})
+                                    .to(mdtype)
+                                    .view({M});
+      torch::Tensor mask  = (depth_prior > 0).to(mdtype);
+      torch::Tensor r_d   = (depth_prior - invDepth_est).view({M,1});
+      float alpha = (itr == 0) ? alpha1 : alpha2;
+      if (c_depth_reg) {
+        torch::Tensor alpha_vec = alpha * C;
+        C += alpha_vec.view({M}) * mask.view({M});
+        u += alpha_vec.view({M,1}) * r_d * mask.view({M,1});
+      } else {
+        C += alpha * mask.view({M});
+        u += alpha * r_d * mask.view({M,1});
+      }
+    }
+    torch::Tensor Q = 1.0 / ( C + lmbda).view({1, M});
 
     if (t1 - t0 == 0) {
 

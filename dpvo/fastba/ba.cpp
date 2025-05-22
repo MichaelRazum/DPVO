@@ -18,8 +18,11 @@ std::vector<torch::Tensor> cuda_ba(
     torch::Tensor jj, 
     torch::Tensor kk,
     const int PPF,
-    int t0, int t1, int iterations, bool eff_impl);
-
+    int t0, int t1, int iterations, bool eff_impl,
+    const float alpha1,
+    const float alpha2,
+    const bool  c_depth_reg,
+    torch::Tensor depth_prior);
 
 torch::Tensor cuda_reproject(
     torch::Tensor poses,
@@ -40,8 +43,13 @@ std::vector<torch::Tensor> ba(
     torch::Tensor jj, 
     torch::Tensor kk,
     int PPF,
-    int t0, int t1, int iterations, bool eff_impl) {
-  return cuda_ba(poses, patches, intrinsics, target, weight, lmbda, ii, jj, kk, PPF, t0, t1, iterations, eff_impl);
+    int t0, int t1, int iterations, bool eff_impl,
+    const float alpha1,
+    const float alpha2,
+    const bool  c_depth_reg,
+    torch::Tensor depth_prior)
+{
+  return cuda_ba(poses, patches, intrinsics, target, weight, lmbda, ii, jj, kk, PPF, t0, t1, iterations, eff_impl, alpha1, alpha2, c_depth_reg, depth_prior);
 }
 
 
